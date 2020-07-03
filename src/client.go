@@ -19,19 +19,27 @@ func callJoinGame() common.JoinGameReply {
 }
 
 func Player(){
-	fmt.Println("successfully created player...")
+	fmt.Println("CLIENT: successfully created player...")
+
+	// store player state
+	me := common.Player{}
 
 	// keep track of cards locally. if player goes down, server also keeps track
 
 	// join game via RPC
-	fmt.Println("joining game...")
+	fmt.Println("CLIENT: joining game...")
 	reply := callJoinGame()
 
-	if reply.Success {
-		fmt.Println("\tgame joined successfully")
-	} else {
-		fmt.Println("\tgame not joined")
+	if !reply.Success{
+		fmt.Println("Error: Could not join game.")
+		return
 	}
+	// fmt.Println("Joined game")
+
+	me.ID = reply.ID
+	// me.Hand = reply.Hand
+	// me.Pairs = reply.Pairs
+
 
 }
 

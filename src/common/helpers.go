@@ -36,8 +36,13 @@ type JoinGameArgs struct {
 
 type JoinGameReply struct {
 	Success bool
-	Hand  []Card
-	Pairs []Pairs
+	ID int
+	// Hand  []Card
+	// Pairs []Pairs
+}
+
+type GameStatusRequest struct {
+	
 }
 
 type GameStatusReply struct {
