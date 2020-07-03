@@ -20,14 +20,35 @@ type Player struct {
 	Pairs []Pairs
 }
 
+type GameStatusReply struct {
+	Complete      bool
+	Turn          int
+	CurrentPlayer int
+	Winner        int
+	Scores        []int
+}
+
 type CardRequest struct {
+	Turn   int
 	Target int //Index of target player
 	Value  string
 }
 
 type CardRequestReply struct {
+	Turn   int
 	Cards  []Card
 	GoFish bool
+}
+
+type PlayPairRequest struct {
+	Turn  int
+	Owner int
+	Pair  []Pairs
+}
+
+type PlayPairReply struct {
+	Turn     int
+	Accepted bool
 }
 
 func Shuffle(slice []Card) {

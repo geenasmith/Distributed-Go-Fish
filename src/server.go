@@ -31,6 +31,8 @@ Pass All valued cards on ask
 // struct to hold game state info
 type GameServer struct {
 	Ready             bool
+	GameOver          bool
+	Winner            int
 	Players           []common.Player
 	Deck              []common.Card
 	CurrentTurnPlayer int
@@ -96,6 +98,21 @@ func (gs *GameServer) initPlayers(x int) {
 	}
 
 }
+func (gs *GameServer) AskIfOver(gameStatus *common.GameStatusReply) {
+	gameStatus.Complete = gs.GameOver
+	gameStatus.CurrentPlayer = gs.CurrentTurnPlayer
+	gameStatus.Turn = gs.CurrentTurn
+	var scores []int
+	for _, v := range gs.Players {
+		scores = append(scores, len(v.Pairs))
+	}
+	gameStatus.Scores = scores
+	if gs.GameOver {
+		gameStatus.Winner = gs.Winner
+	} else {
+		gameStatus.Winner = -1
+	}
+}
 
 func (gs *GameServer) AskForCards(ask *common.CardRequest, reply *common.CardRequestReply) {
 	reply.GoFish = true
@@ -115,6 +132,19 @@ func (gs *GameServer) AskForCards(ask *common.CardRequest, reply *common.CardReq
 			gs.Players[ask.Target].Hand = append(gs.Players[ask.Target].Hand[:v-i], gs.Players[ask.Target].Hand[v+1-i:]...)
 		}
 	}
+	gs.checkGameOver()
+}
+
+func (gs *GameServer) EndTurn(ask *common.PlayPairRequest, reply *common.PlayPairReply) {
+	if len(ask.Pair) != 0 {
+		for _, v := range ask.Pair {
+			gs.Players[ask.Owner].Pairs = append(gs.Players[ask.Owner].Pairs, v)
+		}
+	}
+	gs.CurrentTurnPlayer++
+	if gs.CurrentTurnPlayer > gs.PlayerCount {
+		gs.CurrentTurn++
+	}
 }
 
 func (gs *GameServer) goFish() common.Card {
@@ -123,10 +153,27 @@ func (gs *GameServer) goFish() common.Card {
 	return fish
 }
 
+func (gs *GameServer) checkGameOver() {
+	var deckEmpty = false
+	var playerEmpty = true
+	if len(gs.Deck) == 0 {
+		deckEmpty = true
+	}
+	for _, v := range gs.Players {
+		if len(v.Hand) != 0 {
+			playerEmpty = false
+		}
+	}
+	gs.GameOver = playerEmpty && deckEmpty
+}
+
 // Create a GameServer
 // ** adapted from mapreduce
 func MakeGameServer() *GameServer {
 	gs := GameServer{}
+	gs.CurrentTurn = 0
+	gs.CurrentTurnPlayer = 0
+	gs.GameOver = false
 	var x = 3
 	gs.initPlayers(x)
 	gs.loadCards()
