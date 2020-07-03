@@ -41,6 +41,10 @@ type JoinGameReply struct {
 	// Pairs []Pairs
 }
 
+type GameStatusRequest struct {
+	
+}
+
 type GameStatusReply struct {
 	Complete      bool
 	Turn          int

@@ -116,7 +116,7 @@ func (gs *GameServer) dealCards() {
 	}
 }
 
-func (gs *GameServer) AskIfOver(gameStatus *common.GameStatusReply) {
+func (gs *GameServer) AskIfOver(ask *common.GameStatusRequest, gameStatus *common.GameStatusReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
@@ -133,6 +133,8 @@ func (gs *GameServer) AskIfOver(gameStatus *common.GameStatusReply) {
 	} else {
 		gameStatus.Winner = -1
 	}
+
+	return nil
 }
 
 func (gs *GameServer) AskForCards(ask *common.CardRequest, reply *common.CardRequestReply) error {
@@ -241,7 +243,7 @@ func main() {
 
 	gs := MakeGameServer()
 
-	for gs.Done() == false {
+	for gs.Done() == false { // modify this later for checking if game done
 		time.Sleep(time.Second)
 	}
 
