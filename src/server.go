@@ -14,21 +14,24 @@ import "net/http"
 import "log"
 import "./common"
 
+/*
+Starting Hand 7 Cards
+
+*/
 
 // ** adapted from mapreduce
 // func GameServerSock() string {
 // 	s := "/var/tmp/824-gs-"
 // 	s += strconv.Itoa(os.Getuid())
 // 	return s
-// }
-
+//
 
 // struct to hold game state info
 type GameServer struct {
-	Ready bool
-	Deck  []common.Card
+	Ready   bool
+	Players common.Player
+	Deck    []common.Card
 }
-
 
 // ** adapted from mapreduce
 func (gs *GameServer) Done() bool {
@@ -52,11 +55,11 @@ func (gs *GameServer) server() {
 }
 
 func (gs *GameServer) loadCards() {
-	fmt.Printf("loading cards")
+	fmt.Printf("loading cards\n")
 	var values []common.Card
 	file, err := os.Open("standard52.json")
 	if err != nil {
-		log.Fatalf("Can opend card file")
+		log.Fatalf("Can opend card file\n")
 	}
 	dec := json.NewDecoder(file)
 	if err := dec.Decode(&values); err != nil {
@@ -66,7 +69,13 @@ func (gs *GameServer) loadCards() {
 	}
 
 	_ = file.Close()
-	fmt.Printf("%v Cards", values)
+	gs.Deck = values
+	fmt.Printf("%v Cards\n", values)
+}
+
+func (gs *GameServer) dealCards() {
+	common.Shuffle(gs.Deck)
+	fmt.Printf("%v\n", gs.Deck)
 }
 
 // Create a GameServer
@@ -74,6 +83,7 @@ func (gs *GameServer) loadCards() {
 func MakeGameServer() *GameServer {
 	gs := GameServer{}
 	gs.loadCards()
+	gs.dealCards()
 	gs.server()
 	return &gs
 }
