@@ -1,5 +1,7 @@
+package common
 
 import "strconv"
+import "os"
 
 // RPC's:
 // - start a game
@@ -9,7 +11,7 @@ import "strconv"
 
 
 // ** adapted from mapreduce
-func gameServerSock() string {
+func GameServerSock() string {
 	s := "/var/tmp/824-gs-"
 	s += strconv.Itoa(os.Getuid())
 	return s
