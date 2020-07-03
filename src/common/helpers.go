@@ -16,8 +16,18 @@ type Pairs struct {
 }
 
 type Player struct {
-	Hand []Card
-	Pars []Pairs
+	Hand  []Card
+	Pairs []Pairs
+}
+
+type CardRequest struct {
+	Target int //Index of target player
+	Value  string
+}
+
+type CardRequestReply struct {
+	Cards  []Card
+	GoFish bool
 }
 
 func Shuffle(slice []Card) {
