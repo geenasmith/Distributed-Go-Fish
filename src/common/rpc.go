@@ -1,8 +1,5 @@
 package common
 
-import "strconv"
-import "os"
-
 // RPC's:
 // - start a game
 // - Ask for a card
@@ -10,9 +7,9 @@ import "os"
 // - game status (in progress, your turn, game over)
 
 
-// ** adapted from mapreduce
-func GameServerSock() string {
-	s := "/var/tmp/824-gs-"
-	s += strconv.Itoa(os.Getuid())
-	return s
-}
+// Start game:
+// players call server to join a game
+// if a game hasnt been created, server creates a new one
+// if it has, player joins the game
+// games can only have between 2-7 players
+// first player to join is the first to play (identified by indices 0,1,2...)
