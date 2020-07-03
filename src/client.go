@@ -6,12 +6,30 @@ import "fmt"
 import "log"
 import "./common"
 
+// 
+func callJoinGame() common.JoinGameReply {
+	args := common.JoinGameArgs{}
+	reply := common.JoinGameReply{}
+
+	call("GameServer.JoinGame", &args, &reply)
+
+	return reply
+}
+
 func Player(){
 	fmt.Println("successfully created player...")
 
 	// keep track of cards locally. if player goes down, server also keeps track
 
 	// join game via RPC
+	fmt.Println("joining game...")
+	reply := callJoinGame()
+
+	if reply.Success {
+		fmt.Println("\tcallJoinGame working")
+	} else {
+		fmt.Println("\tcallJoinGame NOT working")
+	}
 
 }
 

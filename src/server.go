@@ -2,26 +2,30 @@
 
 package main
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+)
 import "net"
 import "os"
 import "net/rpc"
 import "net/http"
-// import "strconv"
 import "log"
-import "time"
 import "./common"
-
-// ** adapted from mapreduce
-// func GameServerSock() string {
-// 	s := "/var/tmp/824-gs-"
-// 	s += strconv.Itoa(os.Getuid())
-// 	return s
-// }
+import "time"
 
 // struct to hold game state info
 type GameServer struct {
+	Ready bool
+	Deck  []common.Card
+}
 
+// join game RPC on the server side
+func (gs *GameServer) JoinGame(args *common.JoinGameArgs, reply *common.JoinGameReply) error {
+	reply.Success = true
+
+	return nil
 }
 
 // ** adapted from mapreduce
@@ -45,24 +49,42 @@ func (gs *GameServer) server() {
 	go http.Serve(l, nil)
 }
 
+func (gs *GameServer) loadCards() {
+	fmt.Printf("loading cards")
+	var values []common.Card
+	file, err := os.Open("standard52.json")
+	if err != nil {
+		log.Fatalf("Can opend card file")
+	}
+	dec := json.NewDecoder(file)
+	if err := dec.Decode(&values); err != nil {
+		if err != io.EOF {
+			fmt.Printf("%v\n", err)
+		}
+	}
+
+	_ = file.Close()
+	fmt.Printf("%v Cards", values)
+}
+
 // Create a GameServer
 // ** adapted from mapreduce
 func MakeGameServer() *GameServer {
 	gs := GameServer{}
+	gs.loadCards()
 	gs.server()
 	return &gs
 }
 
-func main(){
+func main() {
 
 	// ** adapted from mapreduce
 	gs := MakeGameServer()
 
-	fmt.Println("successfully created server...")
-
 	for gs.Done() == false {
 		time.Sleep(time.Second)
 	}
-	time.Sleep(time.Second)
+
+	fmt.Println("successfully created server...")
 
 }
