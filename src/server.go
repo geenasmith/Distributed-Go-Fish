@@ -2,14 +2,12 @@
 
 package main
 
-import "fmt"
+import "encoding/json"
 import "net"
 import "os"
 import "net/rpc"
 import "net/http"
-// import "strconv"
 import "log"
-import "time"
 import "./common"
 
 // ** adapted from mapreduce
@@ -19,9 +17,25 @@ import "./common"
 // 	return s
 // }
 
+type Card struct {
+	Value int
+	Suite string
+}
+
 // struct to hold game state info
 type GameServer struct {
+	Ready bool
+	Deck  []Card
+}
 
+type Pairs struct {
+	one Card
+	two Card
+}
+
+type Player struct {
+	Hand []Card
+	Pars []Pairs
 }
 
 // ** adapted from mapreduce
@@ -45,10 +59,32 @@ func (gs *GameServer) server() {
 	go http.Serve(l, nil)
 }
 
+func (gs *GameServer) loadCards() {
+	var values []Card
+	file, err := os.Open("standard52.json")
+	if err != nil {
+		log.Fatalf("Can opend card file")
+	}
+	dec := json.NewDecoder(file)
+	for {
+		var item Card
+		if err := dec.Decode(&item); err != nil {
+			if err != io.EOF {
+				fmt.Printf("%v\n", err)
+			}
+			break
+		}
+		values = append(values, item)
+	}
+	_ = file.Close()
+	fmt.Printf("%v", values)
+}
+
 // Create a GameServer
 // ** adapted from mapreduce
 func MakeGameServer() *GameServer {
 	gs := GameServer{}
+	gs.loadCards()
 	gs.server()
 	return &gs
 }
@@ -60,9 +96,5 @@ func main(){
 
 	fmt.Println("successfully created server...")
 
-	for gs.Done() == false {
-		time.Sleep(time.Second)
-	}
-	time.Sleep(time.Second)
 
 }
