@@ -8,6 +8,11 @@ import "./common"
 
 func Player(){
 	fmt.Println("successfully created player...")
+
+	// keep track of cards locally. if player goes down, server also keeps track
+
+	// join game via RPC
+
 }
 
 
