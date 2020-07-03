@@ -14,6 +14,7 @@ import "net/http"
 import "log"
 import "./common"
 
+
 // ** adapted from mapreduce
 // func GameServerSock() string {
 // 	s := "/var/tmp/824-gs-"
@@ -21,26 +22,13 @@ import "./common"
 // 	return s
 // }
 
-type Card struct {
-	Value string
-	Suit string
-}
 
 // struct to hold game state info
 type GameServer struct {
 	Ready bool
-	Deck  []Card
+	Deck  []common.Card
 }
 
-type Pairs struct {
-	one Card
-	two Card
-}
-
-type Player struct {
-	Hand []Card
-	Pars []Pairs
-}
 
 // ** adapted from mapreduce
 func (gs *GameServer) Done() bool {
@@ -65,7 +53,7 @@ func (gs *GameServer) server() {
 
 func (gs *GameServer) loadCards() {
 	fmt.Printf("loading cards")
-	var values []Card
+	var values []common.Card
 	file, err := os.Open("standard52.json")
 	if err != nil {
 		log.Fatalf("Can opend card file")
