@@ -1,10 +1,23 @@
 // **** NOTE: none of this has been tested. Just copy/pasted and changed slightly from mapreduce
 
+package main
 
+import "fmt"
 import "net"
 import "os"
 import "net/rpc"
 import "net/http"
+// import "strconv"
+import "log"
+import "time"
+import "./common"
+
+// ** adapted from mapreduce
+// func GameServerSock() string {
+// 	s := "/var/tmp/824-gs-"
+// 	s += strconv.Itoa(os.Getuid())
+// 	return s
+// }
 
 // struct to hold game state info
 type GameServer struct {
@@ -13,7 +26,7 @@ type GameServer struct {
 
 // ** adapted from mapreduce
 func (gs *GameServer) Done() bool {
-	ret := true
+	ret := false
 
 	return ret
 }
@@ -23,7 +36,7 @@ func (gs *GameServer) server() {
 	rpc.Register(gs)
 	rpc.HandleHTTP()
 	//l, e := net.Listen("tcp", ":1234")
-	sockname := gameServerSock()
+	sockname := common.GameServerSock()
 	os.Remove(sockname)
 	l, e := net.Listen("unix", sockname)
 	if e != nil {
@@ -43,7 +56,9 @@ func MakeGameServer() *GameServer {
 func main(){
 
 	// ** adapted from mapreduce
-	gs := mr.MakeGameServer()
+	gs := MakeGameServer()
+
+	fmt.Println("successfully created server...")
 
 	for gs.Done() == false {
 		time.Sleep(time.Second)

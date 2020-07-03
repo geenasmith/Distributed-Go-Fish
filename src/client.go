@@ -1,8 +1,13 @@
 
+package main
+
 import "net/rpc"
+import "fmt"
+import "log"
+import "./common"
 
 func Player(){
-	
+	fmt.Println("successfully created player...")
 }
 
 
@@ -18,7 +23,7 @@ func main(){
 // returns false if something goes wrong.
 func call(rpcname string, args interface{}, reply interface{}) bool {
 	// c, err := rpc.DialHTTP("tcp", "127.0.0.1"+":1234")
-	sockname := gameServerSock()
+	sockname := common.GameServerSock()
 	c, err := rpc.DialHTTP("unix", sockname)
 	if err != nil {
 		log.Fatal("dialing:", err)
