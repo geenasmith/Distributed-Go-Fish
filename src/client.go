@@ -1,12 +1,14 @@
-
 package main
 
-import "net/rpc"
-import "fmt"
-import "log"
-import "./common"
+import (
+	"net/rpc"
+	"fmt"
+	"log"
+	"./common"
+)
 
-// 
+
+// RPC - Join Game
 func callJoinGame() common.JoinGameReply {
 	args := common.JoinGameArgs{}
 	reply := common.JoinGameReply{}
@@ -26,9 +28,9 @@ func Player(){
 	reply := callJoinGame()
 
 	if reply.Success {
-		fmt.Println("\tcallJoinGame working")
+		fmt.Println("\tgame joined successfully")
 	} else {
-		fmt.Println("\tcallJoinGame NOT working")
+		fmt.Println("\tgame not joined")
 	}
 
 }

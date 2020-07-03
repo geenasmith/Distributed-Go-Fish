@@ -1,35 +1,40 @@
-// **** NOTE: none of this has been tested. Just copy/pasted and changed slightly from mapreduce
-
 package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
+	"os"
+	"net/rpc"
+	"net/http"
+	"log"
+	"./common"
+	"time"
 )
-import "net"
-import "os"
-import "net/rpc"
-import "net/http"
-import "log"
-import "./common"
-import "time"
 
 // struct to hold game state info
 type GameServer struct {
 	Ready             bool
 	GameOver          bool
 	Winner            int
-	Players           []common.Player
-	Deck              []common.Card
+	Players           []common.Player // holds ID, hand, and pairs
+	Deck              []common.Card // hold the cards that are still in the deck
 	CurrentTurnPlayer int
 	CurrentTurn       int
 	PlayerCount       int
 }
 
-// join game RPC on the server side
+// RPC - Join Game
 func (gs *GameServer) JoinGame(args *common.JoinGameArgs, reply *common.JoinGameReply) error {
 	reply.Success = true
+
+	// if a game does not exist, start one
+	// if PlayerCount == 7, return false (too many players)
+	// else add new player
+	//     return 7 cards
+	//     assign player ID (index 0,1,2,...)
+
 
 	return nil
 }
@@ -85,13 +90,14 @@ func (gs *GameServer) dealCards() {
 	}
 }
 
+// helper function to test. Delete later
 func (gs *GameServer) initPlayers(x int) {
 	gs.PlayerCount = x
 	for i := 0; i < gs.PlayerCount; i++ {
 		gs.Players = append(gs.Players, common.Player{})
 	}
-
 }
+
 func (gs *GameServer) AskIfOver(gameStatus *common.GameStatusReply) {
 	gameStatus.Complete = gs.GameOver
 	gameStatus.CurrentPlayer = gs.CurrentTurnPlayer
@@ -162,7 +168,6 @@ func (gs *GameServer) checkGameOver() {
 }
 
 // Create a GameServer
-// ** adapted from mapreduce
 func MakeGameServer() *GameServer {
 	gs := GameServer{}
 	gs.CurrentTurn = 0
@@ -178,7 +183,6 @@ func MakeGameServer() *GameServer {
 
 func main() {
 
-	// ** adapted from mapreduce
 	gs := MakeGameServer()
 
 	for gs.Done() == false {

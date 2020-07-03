@@ -25,6 +25,7 @@ type Pairs struct {
 }
 
 type Player struct {
+	ID int
 	Hand []Card
 	Pairs []Pairs
 }
