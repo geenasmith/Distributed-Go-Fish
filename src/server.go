@@ -2,7 +2,11 @@
 
 package main
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+)
 import "net"
 import "os"
 import "net/rpc"
@@ -18,8 +22,8 @@ import "./common"
 // }
 
 type Card struct {
-	Value int
-	Suite string
+	Value string
+	Suit string
 }
 
 // struct to hold game state info
@@ -60,24 +64,21 @@ func (gs *GameServer) server() {
 }
 
 func (gs *GameServer) loadCards() {
+	fmt.Printf("loading cards")
 	var values []Card
 	file, err := os.Open("standard52.json")
 	if err != nil {
 		log.Fatalf("Can opend card file")
 	}
 	dec := json.NewDecoder(file)
-	for {
-		var item Card
-		if err := dec.Decode(&item); err != nil {
-			if err != io.EOF {
-				fmt.Printf("%v\n", err)
-			}
-			break
+	if err := dec.Decode(&values); err != nil {
+		if err != io.EOF {
+			fmt.Printf("%v\n", err)
 		}
-		values = append(values, item)
 	}
+
 	_ = file.Close()
-	fmt.Printf("%v", values)
+	fmt.Printf("%v Cards", values)
 }
 
 // Create a GameServer
@@ -89,12 +90,11 @@ func MakeGameServer() *GameServer {
 	return &gs
 }
 
-func main(){
+func main() {
 
 	// ** adapted from mapreduce
-	gs := MakeGameServer()
+	_ = MakeGameServer()
 
 	fmt.Println("successfully created server...")
-
 
 }
