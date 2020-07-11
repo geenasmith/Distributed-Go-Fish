@@ -96,7 +96,6 @@ func (gs *GameServer) loadCards() {
 
 	_ = file.Close()
 	gs.Deck = values
-	fmt.Printf("%v Cards\n", values)
 }
 
 func (gs *GameServer) dealCards() {

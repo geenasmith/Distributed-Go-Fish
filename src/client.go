@@ -94,6 +94,7 @@ func (p *Player) PlayGoFish() {
 		var reply = callGetGameStatus()
 		p.Opponents = reply.Players
 		if reply.CurrentPlayer == p.ID {
+			fmt.Printf("My turn\n")
 			p.doTurn()
 			p.endTurn()
 		}
@@ -175,7 +176,7 @@ func callJoinGame() JoinGameReply {
 	return reply
 }
 
-func createPlayer() {
+func createPlayer() Player {
 	fmt.Println("CLIENT: successfully created player...")
 
 	// store player state
@@ -189,19 +190,21 @@ func createPlayer() {
 
 	if !reply.Success {
 		fmt.Println("Error: Could not join game.")
-		return
+		os.Exit(1)
 	}
 	// fmt.Println("Joined game")
 
 	me.ID = reply.ID
 	// me.Hand = reply.Hand
 	// me.Pairs = reply.Pairs
+	return me
 
 }
 
 func main() {
 
-	createPlayer()
+	player := createPlayer()
+	go player.PlayGoFish()
 
 }
 
