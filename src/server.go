@@ -9,19 +9,19 @@ import (
 	"net/rpc"
 	"net/http"
 	"log"
-	"./common"
 	"time"
 	"sync"
+
 )
 
 // struct to hold game state info
 type GameServer struct {
-	Mu				  sync.Mutex
+	Mu                sync.Mutex
 	Ready             bool
 	GameOver          bool
 	Winner            int
-	Players           []common.Player // holds ID, hand, and pairs
-	Deck              []common.Card // hold the cards that are still in the deck
+	Players           []Player // holds ID, hand, and pairs
+	Deck              []Card   // hold the cards that are still in the deck
 	CurrentTurnPlayer int
 	CurrentTurn       int
 	PlayerCount       int
@@ -29,7 +29,7 @@ type GameServer struct {
 }
 
 // RPC - Join Game
-func (gs *GameServer) JoinGame(args *common.JoinGameArgs, reply *common.JoinGameReply) error {
+func (gs *GameServer) JoinGame(args *JoinGameArgs, reply *JoinGameReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
@@ -38,7 +38,7 @@ func (gs *GameServer) JoinGame(args *common.JoinGameArgs, reply *common.JoinGame
 		reply.Success = false
 		return nil
 	}
-	
+
 	reply.Success = true
 
 	// if game doesn't exist, start one
@@ -50,7 +50,7 @@ func (gs *GameServer) JoinGame(args *common.JoinGameArgs, reply *common.JoinGame
 	reply.ID = gs.PlayerCount
 
 	// append player to game state
-	gs.Players = append(gs.Players, common.Player{ID: gs.PlayerCount})
+	gs.Players = append(gs.Players, Player{ID: gs.PlayerCount})
 	gs.PlayerCount++
 
 	return nil
@@ -68,7 +68,7 @@ func (gs *GameServer) server() {
 	rpc.Register(gs)
 	rpc.HandleHTTP()
 	//l, e := net.Listen("tcp", ":1234")
-	sockname := common.GameServerSock()
+	sockname := GameServerSock()
 	os.Remove(sockname)
 	l, e := net.Listen("unix", sockname)
 	if e != nil {
@@ -82,7 +82,7 @@ func (gs *GameServer) loadCards() {
 	defer gs.Mu.Unlock()
 
 	fmt.Printf("SERVER: loading cards\n")
-	var values []common.Card
+	var values []Card
 	file, err := os.Open("standard52.json")
 	if err != nil {
 		log.Fatalf("Can opend card file\n")
@@ -103,7 +103,7 @@ func (gs *GameServer) dealCards() {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
-	common.Shuffle(gs.Deck)
+	Shuffle(gs.Deck)
 
 	for i := 0; i < gs.PlayerCount; i++ {
 		gs.Players[i].Hand = gs.Deck[0:7]
@@ -116,13 +116,14 @@ func (gs *GameServer) dealCards() {
 	}
 }
 
-func (gs *GameServer) AskIfOver(ask *common.GameStatusRequest, gameStatus *common.GameStatusReply) error {
+func (gs *GameServer) AskGameStatus(ask *GameStatusRequest, gameStatus *GameStatusReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
 	gameStatus.Complete = gs.GameOver
 	gameStatus.CurrentPlayer = gs.CurrentTurnPlayer
 	gameStatus.Turn = gs.CurrentTurn
+	gameStatus.Players = gs.Players
 	var scores []int
 	for _, v := range gs.Players {
 		scores = append(scores, len(v.Pairs))
@@ -137,7 +138,7 @@ func (gs *GameServer) AskIfOver(ask *common.GameStatusRequest, gameStatus *commo
 	return nil
 }
 
-func (gs *GameServer) AskForCards(ask *common.CardRequest, reply *common.CardRequestReply) error {
+func (gs *GameServer) AskForCards(ask *CardRequest, reply *CardRequestReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
@@ -163,11 +164,11 @@ func (gs *GameServer) AskForCards(ask *common.CardRequest, reply *common.CardReq
 	return nil
 }
 
-func (gs *GameServer) EndTurn(ask *common.PlayPairRequest, reply *common.PlayPairReply) error {
+func (gs *GameServer) EndTurn(ask *PlayPairRequest, reply *PlayPairReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
-	if len(ask.Pair) != 0 {
+	if ask.Pair != nil && len(ask.Pair) != 0 {
 		for _, v := range ask.Pair {
 			gs.Players[ask.Owner].Pairs = append(gs.Players[ask.Owner].Pairs, v)
 		}
@@ -180,7 +181,7 @@ func (gs *GameServer) EndTurn(ask *common.PlayPairRequest, reply *common.PlayPai
 	return nil
 }
 
-func (gs *GameServer) goFish() common.Card {
+func (gs *GameServer) goFish() Card {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
@@ -219,7 +220,7 @@ func MakeGameServer() *GameServer {
 
 	// wait 5 seconds for players to join
 	// break after time or when 7 players join
-	for start := time.Now(); time.Since(start) < 5 * time.Second; {
+	for start := time.Now(); time.Since(start) < 30*time.Second; {
 		if gs.PlayerCount == 7 {
 			break
 		}
@@ -235,7 +236,7 @@ func MakeGameServer() *GameServer {
 
 	gs.loadCards()
 	gs.dealCards()
-	
+
 	return &gs
 }
 
