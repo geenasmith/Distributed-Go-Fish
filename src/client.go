@@ -1,10 +1,10 @@
 package main
 
 import (
-	"math/rand"
-	"net/rpc"
 	"fmt"
 	"log"
+	"math/rand"
+	"net/rpc"
 	"os"
 	"strconv"
 	"time"
@@ -27,6 +27,7 @@ func GameServerSock() string {
 type Card struct {
 	Value string
 	Suit  string
+	used  bool
 }
 
 type Pairs struct {
@@ -71,6 +72,7 @@ type CardRequestReply struct {
 type PlayPairRequest struct {
 	Turn  int
 	Owner int
+	Hand  []Card
 	Pair  []Pairs
 }
 
@@ -91,10 +93,14 @@ func (p *Player) PlayGoFish() {
 	var gameOver = false
 	for !gameOver {
 		var reply = callGetGameStatus()
+		if reply.Complete {
+			fmt.Printf("Game Dome")
+			return
+		}
 		p.Opponents = reply.Players
 		p.Hand = reply.Players[p.ID].Hand
+		p.Pairs = reply.Players[p.ID].Pairs
 		if reply.CurrentPlayer == p.ID {
-			fmt.Printf("My turn %d  %v   \n ", p.ID, p.Hand)
 			p.doTurn()
 			p.endTurn()
 		}
@@ -107,12 +113,19 @@ func (p *Player) doTurn() {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	var randIdx = p.ID
 	if len(p.Opponents) > 1 {
+		fmt.Printf("%v My hand %d\n", p.Hand, p.ID)
+		fmt.Printf("%v My paris %d\n\n\n\n", p.Pairs, p.ID)
 		for randIdx == p.ID {
 			randIdx = r.Intn(len(p.Opponents))
 		}
 		args := CardRequest{Target: p.Opponents[randIdx].ID}
-		randIdx = r.Intn(len(p.Hand))
-		args.Value = p.Hand[randIdx].Value
+		if len(p.Hand) > 0 {
+			randIdx = r.Intn(len(p.Hand))
+			args.Value = p.Hand[randIdx].Value
+		} else {
+			args.Value = "-1"
+		}
+
 		p.callAskForCard(args)
 	} else {
 		time.Sleep(300 * time.Millisecond)
@@ -122,45 +135,42 @@ func (p *Player) doTurn() {
 func (p *Player) callAskForCard(args CardRequest) {
 	reply := CardRequestReply{}
 	call("GameServer.AskForCards", &args, &reply)
-	p.Hand = append(p.Hand, reply.Cards...)
+	if len(reply.Cards) > 1 || reply.Cards[0].Value != "-1" {
+		p.Hand = append(p.Hand, reply.Cards...)
+	}
 }
 
 func (p *Player) endTurn() {
 	var pairList []Pairs
-	var used []int
 	//Booo selection sort bad
 	for i := 0; i < len(p.Hand); i++ {
 		for x := i; x < len(p.Hand); x++ {
-			if p.Hand[i].Value == p.Hand[x].Value && notUsed(i, x, used) {
-				used = append(used, x)
-				used = append(used, i)
+			if p.Hand[i].Value == p.Hand[x].Value && !p.Hand[x].used && !p.Hand[i].used && i != x {
+				p.Hand[i].used = true
+				p.Hand[x].used = true
 				pairList = append(pairList, Pairs{One: p.Hand[i], Two: p.Hand[x]})
 			}
 		}
-	}
-	// Idk if this works YA YEET
-	for i, v := range used {
-		p.Hand = append(p.Hand[:v-i], p.Hand[v+1-i:]...)
+
 	}
 
+	// Idk if this works YA YEET
+	var newList []Card
+	for _, v := range p.Hand {
+		if v.used != true {
+			newList = append(newList, v)
+		}
+	}
+	p.Hand = newList
 	p.callEndTurn(pairList)
 
 }
 
 func (p *Player) callEndTurn(pairs []Pairs) {
-	args := PlayPairRequest{Owner: p.ID, Pair: pairs}
-	call("GameServer.EndTurn", &args, PlayPairReply{})
+	args := PlayPairRequest{Owner: p.ID, Pair: pairs, Hand: p.Hand}
+	call("GameServer.EndTurn", &args, &PlayPairReply{})
 
 	//Might want to update turn here from reply
-}
-
-func notUsed(i int, x int, used []int) bool {
-	for _, v := range used {
-		if v == i || v == x {
-			return false
-		}
-	}
-	return true
 }
 
 func callGetGameStatus() GameStatusReply {

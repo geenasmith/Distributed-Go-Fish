@@ -9,6 +9,7 @@ import (
 	"net/rpc"
 	"net/http"
 	"log"
+	"sort"
 	"time"
 	"sync"
 )
@@ -31,7 +32,6 @@ type GameServer struct {
 func (gs *GameServer) JoinGame(args *JoinGameArgs, reply *JoinGameReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
-	fmt.Printf("Join started")
 	// no more than 7 players
 	if gs.PlayerCount == 7 {
 		reply.Success = false
@@ -50,7 +50,6 @@ func (gs *GameServer) JoinGame(args *JoinGameArgs, reply *JoinGameReply) error {
 	// append player to game state
 	gs.Players = append(gs.Players, Player{ID: gs.PlayerCount})
 	gs.PlayerCount = len(gs.Players)
-	fmt.Printf("Join ended")
 	return nil
 }
 
@@ -118,7 +117,6 @@ func (gs *GameServer) AskGameStatus(ask *GameStatusRequest, gameStatus *GameStat
 	gameStatus.CurrentPlayer = gs.CurrentTurnPlayer
 	gameStatus.Turn = gs.CurrentTurn
 	gameStatus.Players = gs.Players
-	fmt.Printf("%v\n", gs.Players)
 	var scores []int
 	for _, v := range gs.Players {
 		scores = append(scores, len(v.Pairs))
@@ -135,7 +133,6 @@ func (gs *GameServer) AskGameStatus(ask *GameStatusRequest, gameStatus *GameStat
 
 func (gs *GameServer) AskForCards(ask *CardRequest, reply *CardRequestReply) error {
 	gs.Mu.Lock()
-	defer gs.Mu.Unlock()
 
 	reply.GoFish = true
 	var toRemove []int
@@ -150,10 +147,12 @@ func (gs *GameServer) AskForCards(ask *CardRequest, reply *CardRequestReply) err
 	if reply.GoFish {
 		reply.Cards = append(reply.Cards, gs.goFish())
 	} else {
+		sort.Ints(toRemove)
 		for i, v := range toRemove {
 			gs.Players[ask.Target].Hand = append(gs.Players[ask.Target].Hand[:v-i], gs.Players[ask.Target].Hand[v+1-i:]...)
 		}
 	}
+	gs.Mu.Unlock()
 	gs.checkGameOver()
 
 	return nil
@@ -164,22 +163,22 @@ func (gs *GameServer) EndTurn(ask *PlayPairRequest, reply *PlayPairReply) error 
 	defer gs.Mu.Unlock()
 
 	if ask.Pair != nil && len(ask.Pair) != 0 {
-		for _, v := range ask.Pair {
-			gs.Players[ask.Owner].Pairs = append(gs.Players[ask.Owner].Pairs, v)
-		}
+		gs.Players[ask.Owner].Pairs = append(gs.Players[ask.Owner].Pairs, ask.Pair...)
+		fmt.Printf("%v for id %d\n", gs.Players[ask.Owner].Pairs, ask.Owner)
 	}
+	gs.Players[ask.Owner].Hand = ask.Hand
 	gs.CurrentTurnPlayer++
-	if gs.CurrentTurnPlayer > gs.PlayerCount {
-		gs.CurrentTurn++
+	if gs.CurrentTurnPlayer >= gs.PlayerCount {
+		gs.CurrentTurnPlayer = 0
 	}
-
+	ask.Pair = nil
 	return nil
 }
 
 func (gs *GameServer) goFish() Card {
-	gs.Mu.Lock()
-	defer gs.Mu.Unlock()
-
+	if len(gs.Deck) == 0 {
+		return Card{Value: "-1"}
+	}
 	var fish = gs.Deck[0]
 	gs.Deck = gs.Deck[1:]
 	return fish
@@ -225,8 +224,9 @@ func MakeGameServer() *GameServer {
 	go runClient()
 	go runClient()
 
-	fmt.Printf("\nSERVER: total %d players\n", gs.PlayerCount)
 	time.Sleep(3 * time.Second)
+	fmt.Printf("\nSERVER: total %d players\n", gs.PlayerCount)
+
 	// not enough players or no one joined
 	if gs.PlayerCount < 2 {
 		fmt.Println("SERVER: Game error not enough players")
@@ -245,10 +245,11 @@ func main() {
 	gs := MakeGameServer()
 	time.Sleep(3 * time.Second)
 
-	for gs.Done() == false { // modify this later for checking if game done
-		time.Sleep(time.Second)
-	}
-
 	fmt.Println("SERVER: successfully created server...")
+
+	for !gs.GameOver {
+	}
+	fmt.Printf("Game Over")
+	time.Sleep(5 * time.Second)
 
 }
