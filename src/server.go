@@ -9,19 +9,19 @@ import (
 	"net/rpc"
 	"net/http"
 	"log"
-	"./common"
+	"sort"
 	"time"
 	"sync"
 )
 
 // struct to hold game state info
 type GameServer struct {
-	Mu				  sync.Mutex
+	Mu                sync.Mutex
 	Ready             bool
 	GameOver          bool
 	Winner            int
-	Players           []common.Player // holds ID, hand, and pairs
-	Deck              []common.Card // hold the cards that are still in the deck
+	Players           []Player // holds ID, hand, and pairs
+	Deck              []Card   // hold the cards that are still in the deck
 	CurrentTurnPlayer int
 	CurrentTurn       int
 	PlayerCount       int
@@ -29,30 +29,27 @@ type GameServer struct {
 }
 
 // RPC - Join Game
-func (gs *GameServer) JoinGame(args *common.JoinGameArgs, reply *common.JoinGameReply) error {
+func (gs *GameServer) JoinGame(args *JoinGameArgs, reply *JoinGameReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
-
 	// no more than 7 players
 	if gs.PlayerCount == 7 {
 		reply.Success = false
 		return nil
 	}
-	
+
 	reply.Success = true
 
 	// if game doesn't exist, start one
 	if !gs.GameInitialized {
 		gs.GameInitialized = true
-		gs.CurrentTurnPlayer = 0
 	}
 
 	reply.ID = gs.PlayerCount
 
 	// append player to game state
-	gs.Players = append(gs.Players, common.Player{ID: gs.PlayerCount})
-	gs.PlayerCount++
-
+	gs.Players = append(gs.Players, Player{ID: gs.PlayerCount})
+	gs.PlayerCount = len(gs.Players)
 	return nil
 }
 
@@ -68,7 +65,7 @@ func (gs *GameServer) server() {
 	rpc.Register(gs)
 	rpc.HandleHTTP()
 	//l, e := net.Listen("tcp", ":1234")
-	sockname := common.GameServerSock()
+	sockname := GameServerSock()
 	os.Remove(sockname)
 	l, e := net.Listen("unix", sockname)
 	if e != nil {
@@ -82,7 +79,7 @@ func (gs *GameServer) loadCards() {
 	defer gs.Mu.Unlock()
 
 	fmt.Printf("SERVER: loading cards\n")
-	var values []common.Card
+	var values []Card
 	file, err := os.Open("standard52.json")
 	if err != nil {
 		log.Fatalf("Can opend card file\n")
@@ -96,33 +93,30 @@ func (gs *GameServer) loadCards() {
 
 	_ = file.Close()
 	gs.Deck = values
-	fmt.Printf("%v Cards\n", values)
 }
 
 func (gs *GameServer) dealCards() {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
-	common.Shuffle(gs.Deck)
+	Shuffle(gs.Deck)
 
 	for i := 0; i < gs.PlayerCount; i++ {
 		gs.Players[i].Hand = gs.Deck[0:7]
 		gs.Deck = gs.Deck[7:]
 	}
 
-	fmt.Println("SERVER: Players")
-	for k, v := range gs.Players {
-		fmt.Printf("\n%v Player %d\n\n", v, k)
-	}
+	fmt.Println("SERVER: Dealing Cards")
 }
 
-func (gs *GameServer) AskIfOver(ask *common.GameStatusRequest, gameStatus *common.GameStatusReply) error {
+func (gs *GameServer) AskGameStatus(ask *GameStatusRequest, gameStatus *GameStatusReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
 	gameStatus.Complete = gs.GameOver
 	gameStatus.CurrentPlayer = gs.CurrentTurnPlayer
 	gameStatus.Turn = gs.CurrentTurn
+	gameStatus.Players = gs.Players
 	var scores []int
 	for _, v := range gs.Players {
 		scores = append(scores, len(v.Pairs))
@@ -137,9 +131,8 @@ func (gs *GameServer) AskIfOver(ask *common.GameStatusRequest, gameStatus *commo
 	return nil
 }
 
-func (gs *GameServer) AskForCards(ask *common.CardRequest, reply *common.CardRequestReply) error {
+func (gs *GameServer) AskForCards(ask *CardRequest, reply *CardRequestReply) error {
 	gs.Mu.Lock()
-	defer gs.Mu.Unlock()
 
 	reply.GoFish = true
 	var toRemove []int
@@ -154,36 +147,38 @@ func (gs *GameServer) AskForCards(ask *common.CardRequest, reply *common.CardReq
 	if reply.GoFish {
 		reply.Cards = append(reply.Cards, gs.goFish())
 	} else {
+		sort.Ints(toRemove)
 		for i, v := range toRemove {
 			gs.Players[ask.Target].Hand = append(gs.Players[ask.Target].Hand[:v-i], gs.Players[ask.Target].Hand[v+1-i:]...)
 		}
 	}
+	gs.Mu.Unlock()
 	gs.checkGameOver()
 
 	return nil
 }
 
-func (gs *GameServer) EndTurn(ask *common.PlayPairRequest, reply *common.PlayPairReply) error {
+func (gs *GameServer) EndTurn(ask *PlayPairRequest, reply *PlayPairReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
-	if len(ask.Pair) != 0 {
-		for _, v := range ask.Pair {
-			gs.Players[ask.Owner].Pairs = append(gs.Players[ask.Owner].Pairs, v)
-		}
+	if ask.Pair != nil && len(ask.Pair) != 0 {
+		gs.Players[ask.Owner].Pairs = append(gs.Players[ask.Owner].Pairs, ask.Pair...)
+		fmt.Printf("%v for id %d\n", gs.Players[ask.Owner].Pairs, ask.Owner)
 	}
+	gs.Players[ask.Owner].Hand = ask.Hand
 	gs.CurrentTurnPlayer++
-	if gs.CurrentTurnPlayer > gs.PlayerCount {
-		gs.CurrentTurn++
+	if gs.CurrentTurnPlayer >= gs.PlayerCount {
+		gs.CurrentTurnPlayer = 0
 	}
-
+	ask.Pair = nil
 	return nil
 }
 
-func (gs *GameServer) goFish() common.Card {
-	gs.Mu.Lock()
-	defer gs.Mu.Unlock()
-
+func (gs *GameServer) goFish() Card {
+	if len(gs.Deck) == 0 {
+		return Card{Value: "-1"}
+	}
 	var fish = gs.Deck[0]
 	gs.Deck = gs.Deck[1:]
 	return fish
@@ -209,8 +204,9 @@ func (gs *GameServer) checkGameOver() {
 // Create a GameServer
 func MakeGameServer() *GameServer {
 	gs := GameServer{}
+	gs.Mu.Lock()
 	gs.CurrentTurn = 0
-	gs.CurrentTurnPlayer = 0
+	gs.CurrentTurnPlayer = -1
 	gs.GameOver = false
 	gs.GameInitialized = false
 	gs.Ready = false
@@ -219,23 +215,28 @@ func MakeGameServer() *GameServer {
 
 	// wait 5 seconds for players to join
 	// break after time or when 7 players join
-	for start := time.Now(); time.Since(start) < 5 * time.Second; {
-		if gs.PlayerCount == 7 {
-			break
-		}
-	}
+	//for start := time.Now(); time.Since(start) < 15*time.Second; {
+	//	if gs.PlayerCount == 7 {
+	//		break
+	//	}
+	//}
+	gs.Mu.Unlock()
+	go runClient()
+	go runClient()
 
+	time.Sleep(3 * time.Second)
 	fmt.Printf("\nSERVER: total %d players\n", gs.PlayerCount)
 
 	// not enough players or no one joined
-	if gs.PlayerCount < 2 || !gs.GameInitialized {
-		fmt.Println("SERVER: Game error")
+	if gs.PlayerCount < 2 {
+		fmt.Println("SERVER: Game error not enough players")
 		return &gs
 	}
 
 	gs.loadCards()
 	gs.dealCards()
-	
+	gs.CurrentTurnPlayer = 0
+
 	return &gs
 }
 
@@ -243,10 +244,13 @@ func main() {
 
 	gs := MakeGameServer()
 
-	for gs.Done() == false { // modify this later for checking if game done
-		time.Sleep(time.Second)
-	}
-
 	fmt.Println("SERVER: successfully created server...")
+
+	for !gs.GameOver {
+		time.Sleep(3 * time.Second)
+	}
+	fmt.Printf("Game Over")
+
+	fmt.Printf("Player %d won with %d pairs", gs.Winner, len(gs.Players[gs.Winner].Pairs))
 
 }
