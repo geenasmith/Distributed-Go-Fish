@@ -242,6 +242,8 @@ func MakeGameServer() *GameServer {
 func main() {
 
 	gs := MakeGameServer()
+	runClient()
+	runClient()
 
 	for gs.Done() == false { // modify this later for checking if game done
 		time.Sleep(time.Second)

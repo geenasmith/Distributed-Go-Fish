@@ -201,7 +201,7 @@ func createPlayer() Player {
 
 }
 
-func main() {
+func runClient() {
 
 	player := createPlayer()
 	go player.PlayGoFish()
