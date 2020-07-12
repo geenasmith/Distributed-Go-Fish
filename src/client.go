@@ -27,7 +27,6 @@ func GameServerSock() string {
 type Card struct {
 	Value string
 	Suit  string
-	Used  bool
 }
 
 type Pairs struct {
@@ -94,9 +93,8 @@ func (p *Player) PlayGoFish() {
 		var reply = callGetGameStatus()
 		p.Opponents = reply.Players
 		p.Hand = reply.Players[p.ID].Hand
-		fmt.Printf("My turn\n ", p.Hand)
 		if reply.CurrentPlayer == p.ID {
-
+			fmt.Printf("My turn %d  %v   \n ", p.ID, p.Hand)
 			p.doTurn()
 			p.endTurn()
 		}
@@ -110,10 +108,8 @@ func (p *Player) doTurn() {
 	var randIdx = p.ID
 	if len(p.Opponents) > 1 {
 		for randIdx == p.ID {
-			fmt.Printf("%v", len(p.Opponents))
-			randIdx = r.Intn(2)
+			randIdx = r.Intn(len(p.Opponents))
 		}
-
 		args := CardRequest{Target: p.Opponents[randIdx].ID}
 		randIdx = r.Intn(len(p.Hand))
 		args.Value = p.Hand[randIdx].Value

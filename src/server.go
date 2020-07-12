@@ -31,7 +31,7 @@ type GameServer struct {
 func (gs *GameServer) JoinGame(args *JoinGameArgs, reply *JoinGameReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
-
+	fmt.Printf("Join started")
 	// no more than 7 players
 	if gs.PlayerCount == 7 {
 		reply.Success = false
@@ -43,15 +43,14 @@ func (gs *GameServer) JoinGame(args *JoinGameArgs, reply *JoinGameReply) error {
 	// if game doesn't exist, start one
 	if !gs.GameInitialized {
 		gs.GameInitialized = true
-		gs.CurrentTurnPlayer = 0
 	}
 
 	reply.ID = gs.PlayerCount
 
 	// append player to game state
 	gs.Players = append(gs.Players, Player{ID: gs.PlayerCount})
-	gs.PlayerCount++
-
+	gs.PlayerCount = len(gs.Players)
+	fmt.Printf("Join ended")
 	return nil
 }
 
@@ -108,10 +107,7 @@ func (gs *GameServer) dealCards() {
 		gs.Deck = gs.Deck[7:]
 	}
 
-	fmt.Println("SERVER: Players")
-	for k, v := range gs.Players {
-		fmt.Printf("\n%v Player %d\n\n", v, k)
-	}
+	fmt.Println("SERVER: Dealing Cards")
 }
 
 func (gs *GameServer) AskGameStatus(ask *GameStatusRequest, gameStatus *GameStatusReply) error {
@@ -122,6 +118,7 @@ func (gs *GameServer) AskGameStatus(ask *GameStatusRequest, gameStatus *GameStat
 	gameStatus.CurrentPlayer = gs.CurrentTurnPlayer
 	gameStatus.Turn = gs.CurrentTurn
 	gameStatus.Players = gs.Players
+	fmt.Printf("%v\n", gs.Players)
 	var scores []int
 	for _, v := range gs.Players {
 		scores = append(scores, len(v.Pairs))
@@ -209,7 +206,6 @@ func (gs *GameServer) checkGameOver() {
 func MakeGameServer() *GameServer {
 	gs := GameServer{}
 	gs.Mu.Lock()
-	defer gs.Mu.Unlock()
 	gs.CurrentTurn = 0
 	gs.CurrentTurnPlayer = -1
 	gs.GameOver = false
@@ -225,14 +221,14 @@ func MakeGameServer() *GameServer {
 	//		break
 	//	}
 	//}
-
+	gs.Mu.Unlock()
 	go runClient()
 	go runClient()
 
 	fmt.Printf("\nSERVER: total %d players\n", gs.PlayerCount)
-
+	time.Sleep(3 * time.Second)
 	// not enough players or no one joined
-	if gs.PlayerCount < 2 || !gs.GameInitialized {
+	if gs.PlayerCount < 2 {
 		fmt.Println("SERVER: Game error not enough players")
 		return &gs
 	}
