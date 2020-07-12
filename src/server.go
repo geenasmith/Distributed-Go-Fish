@@ -243,14 +243,13 @@ func MakeGameServer() *GameServer {
 func main() {
 
 	gs := MakeGameServer()
-	time.Sleep(3 * time.Second)
 
 	fmt.Println("SERVER: successfully created server...")
 
 	for !gs.GameOver {
+		time.Sleep(3 * time.Second)
 	}
 	fmt.Printf("Game Over")
-	time.Sleep(5 * time.Second)
 
 	fmt.Printf("Player %d won with %d pairs", gs.Winner, len(gs.Players[gs.Winner].Pairs))
 
