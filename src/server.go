@@ -252,4 +252,6 @@ func main() {
 	fmt.Printf("Game Over")
 	time.Sleep(5 * time.Second)
 
+	fmt.Printf("Player %d won with %d pairs", gs.Winner, len(gs.Players[gs.Winner].Pairs))
+
 }
