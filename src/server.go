@@ -11,7 +11,6 @@ import (
 	"log"
 	"time"
 	"sync"
-
 )
 
 // struct to hold game state info
@@ -209,8 +208,10 @@ func (gs *GameServer) checkGameOver() {
 // Create a GameServer
 func MakeGameServer() *GameServer {
 	gs := GameServer{}
+	gs.Mu.Lock()
+	defer gs.Mu.Unlock()
 	gs.CurrentTurn = 0
-	gs.CurrentTurnPlayer = 0
+	gs.CurrentTurnPlayer = -1
 	gs.GameOver = false
 	gs.GameInitialized = false
 	gs.Ready = false
@@ -219,22 +220,26 @@ func MakeGameServer() *GameServer {
 
 	// wait 5 seconds for players to join
 	// break after time or when 7 players join
-	for start := time.Now(); time.Since(start) < 30*time.Second; {
-		if gs.PlayerCount == 7 {
-			break
-		}
-	}
+	//for start := time.Now(); time.Since(start) < 15*time.Second; {
+	//	if gs.PlayerCount == 7 {
+	//		break
+	//	}
+	//}
+
+	go runClient()
+	go runClient()
 
 	fmt.Printf("\nSERVER: total %d players\n", gs.PlayerCount)
 
 	// not enough players or no one joined
 	if gs.PlayerCount < 2 || !gs.GameInitialized {
-		fmt.Println("SERVER: Game error")
+		fmt.Println("SERVER: Game error not enough players")
 		return &gs
 	}
 
 	gs.loadCards()
 	gs.dealCards()
+	gs.CurrentTurnPlayer = 0
 
 	return &gs
 }
@@ -242,8 +247,7 @@ func MakeGameServer() *GameServer {
 func main() {
 
 	gs := MakeGameServer()
-	runClient()
-	runClient()
+	time.Sleep(3 * time.Second)
 
 	for gs.Done() == false { // modify this later for checking if game done
 		time.Sleep(time.Second)

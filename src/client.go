@@ -93,8 +93,10 @@ func (p *Player) PlayGoFish() {
 	for !gameOver {
 		var reply = callGetGameStatus()
 		p.Opponents = reply.Players
+		p.Hand = reply.Players[p.ID].Hand
+		fmt.Printf("My turn\n ", p.Hand)
 		if reply.CurrentPlayer == p.ID {
-			fmt.Printf("My turn\n")
+
 			p.doTurn()
 			p.endTurn()
 		}
@@ -106,14 +108,19 @@ func (p *Player) PlayGoFish() {
 func (p *Player) doTurn() {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	var randIdx = p.ID
-	for randIdx == p.ID {
-		randIdx = r.Intn(len(p.Opponents))
-	}
+	if len(p.Opponents) > 1 {
+		for randIdx == p.ID {
+			fmt.Printf("%v", len(p.Opponents))
+			randIdx = r.Intn(2)
+		}
 
-	args := CardRequest{Target: p.Opponents[randIdx].ID}
-	randIdx = r.Intn(len(p.Hand))
-	args.Value = p.Hand[randIdx].Value
-	p.callAskForCard(args)
+		args := CardRequest{Target: p.Opponents[randIdx].ID}
+		randIdx = r.Intn(len(p.Hand))
+		args.Value = p.Hand[randIdx].Value
+		p.callAskForCard(args)
+	} else {
+		time.Sleep(300 * time.Millisecond)
+	}
 }
 
 func (p *Player) callAskForCard(args CardRequest) {
@@ -195,7 +202,7 @@ func createPlayer() Player {
 	// fmt.Println("Joined game")
 
 	me.ID = reply.ID
-	// me.Hand = reply.Hand
+	//me.Hand = reply.Hand
 	// me.Pairs = reply.Pairs
 	return me
 
