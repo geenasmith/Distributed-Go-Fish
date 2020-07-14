@@ -199,6 +199,12 @@ func (gs *GameServer) checkGameOver() {
 		}
 	}
 	gs.GameOver = playerEmpty && deckEmpty
+	gs.Winner = 0
+	for _, k := range gs.Players {
+		if len(gs.Players[gs.Winner].Pairs) < len(k.Pairs) {
+			gs.Winner = k.ID
+		}
+	}
 }
 
 // Create a GameServer
@@ -249,8 +255,8 @@ func main() {
 	for !gs.GameOver {
 		time.Sleep(3 * time.Second)
 	}
-	fmt.Printf("Game Over")
+	fmt.Printf("Game Over\n")
 
-	fmt.Printf("Player %d won with %d pairs", gs.Winner, len(gs.Players[gs.Winner].Pairs))
+	fmt.Printf("Player %d won with %d pairs\n", gs.Winner, len(gs.Players[gs.Winner].Pairs))
 
 }

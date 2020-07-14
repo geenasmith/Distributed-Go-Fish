@@ -94,7 +94,7 @@ func (p *Player) PlayGoFish() {
 	for !gameOver {
 		var reply = callGetGameStatus()
 		if reply.Complete {
-			fmt.Printf("Game Dome")
+			fmt.Printf("Game Done Client\n")
 			return
 		}
 		p.Opponents = reply.Players
