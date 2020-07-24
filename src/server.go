@@ -158,12 +158,12 @@ func (gs *GameServer) EndTurn(ask *PlayPairRequest, reply *PlayPairReply) error 
 	// Update the player's hand
 	gs.Players[ask.Owner].Hand = ask.Hand
 
+
 	// Determine next player
 	gs.CurrentTurnPlayer++
 	if gs.CurrentTurnPlayer >= gs.PlayerCount {
 		gs.CurrentTurnPlayer = 0
 	}
-
 	ask.Pair = nil
 	return nil
 }
@@ -242,8 +242,8 @@ func MakeGameServer() *GameServer {
 	gs.Mu.Unlock()
 
 	// create 2 players
-	go runClient()
-	go runClient()
+	//go runClient()
+	//go runClient()
 
 	time.Sleep(3 * time.Second)
 
@@ -266,14 +266,65 @@ func MakeGameServer() *GameServer {
 func main() {
 
 	gs := MakeGameServer()
-
-	fmt.Println("SERVER: successfully created server...")
-
+	gs.CurrentTurn = 0
+	gs.saveGameState()
+	gs.CurrentTurn = 15
+	gs.getGameState()
+	fmt.Printf("%v", gs.CurrentTurn)
 	for !gs.GameOver {
 		time.Sleep(3 * time.Second)
 	}
 	fmt.Printf("SERVER: Game Over\n")
 
 	fmt.Printf("SERVER: Player %d won with %d pairs\n", gs.Winner, len(gs.Players[gs.Winner].Pairs))
+
+}
+
+func (gs *GameServer) saveGameState() {
+	gs.Mu.Lock()
+	defer gs.Mu.Unlock()
+	args := GameStateArgs{}
+	reply := GameStateReply{}
+	args.Key = string(gs.ServerId)
+	js, _ := json.Marshal(gs)
+	args.Payload = string(js)
+	ok := call("RaftBroker.PutGameState", &args, &reply)
+	if !ok || !reply.OK {
+		fmt.Printf("Put Game state failed\n")
+	}
+}
+
+func (gs *GameServer) getGameState() {
+	gs.Mu.Lock()
+	defer gs.Mu.Unlock()
+	args := GameStateArgs{}
+	reply := GameStateReply{}
+	args.Key = string(gs.ServerId)
+	ok := call("RaftBroker.PutGameState", &args, &reply)
+	if !ok || !reply.OK {
+		fmt.Printf("Put Game state failed\n")
+	}
+	gs.reconcileState(reply.Payload)
+
+}
+
+func (gs *GameServer) reconcileState(payload string) {
+	var gsSaved GameServer
+	err := json.Unmarshal([]byte(payload), &gsSaved)
+	if err != nil {
+		fmt.Printf("Unmarshall of game state failed")
+	}
+	if gsSaved.ServerId != gs.ServerId {
+		fmt.Printf("Wrong game state retreived")
+	} else {
+		gs.Winner = gsSaved.Winner
+		gs.Players = gsSaved.Players
+		gs.GameOver = gsSaved.GameOver
+		gs.CurrentTurnPlayer = gsSaved.CurrentTurnPlayer
+		gs.CurrentTurn = gsSaved.CurrentTurn
+		gs.Deck = gsSaved.Deck
+		gs.Ready = gsSaved.Ready
+		gs.GameInitialized = gsSaved.GameInitialized
+	}
 
 }

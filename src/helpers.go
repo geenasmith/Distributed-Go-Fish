@@ -13,13 +13,27 @@ type GameServer struct {
 	Mu                sync.Mutex
 	Ready             bool
 	GameOver          bool
-	Winner            int // index of the winning player
+	Winner            int      // index of the winning player
 	Players           []Player // holds ID, hand, pairs, and opponents
 	Deck              []Card   // hold the cards that are still in the deck
-	CurrentTurnPlayer int // what's the difference between this and currentTurn???
+	CurrentTurnPlayer int      // what's the difference between this and currentTurn???
 	CurrentTurn       int
 	PlayerCount       int // number of players in the game
 	GameInitialized   bool
+
+	ServerId int
+}
+
+
+
+
+type GameStateArgs struct {
+	Key     string
+	Payload string
+}
+type GameStateReply struct {
+	Payload string
+	OK      bool
 }
 
 type Player struct {
