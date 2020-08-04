@@ -18,5 +18,4 @@ The output of the game will be printed out in the terminal.
 
 ## Contributors:
 - [Ethan Kwan](https://github.com/eetar1)
-- [Derek Lowlind](https://github.com/dereklowlind)
 - [Geena Smith](https://github.com/geenasmith)
