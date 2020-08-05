@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -53,6 +54,7 @@ func main() {
 	cfg := raft.Make_config(t, nservers, false, -1)
 	defer cfg.Cleanup()
 	rb.ck = cfg.MakeClient(cfg.All())
+	fmt.Printf("Raft Server Online\n")
 	for true {
 		time.Sleep(3 * time.Second)
 	}

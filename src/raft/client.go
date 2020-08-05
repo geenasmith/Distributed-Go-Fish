@@ -16,7 +16,7 @@ type Clerk struct {
 	// You will have to modify this struct.
 }
 
-func nrand() int64 {
+func Nrand() int64 {
 	max := big.NewInt(int64(1) << 62)
 	bigx, _ := rand.Int(rand.Reader, max)
 	x := bigx.Int64()
@@ -27,7 +27,7 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
 	ck.servers = servers
 	// You'll have to add code here.
-	ck.clientId = nrand()
+	ck.clientId = Nrand()
 	ck.leader = 0
 	return ck
 }

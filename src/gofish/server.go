@@ -14,24 +14,22 @@ import (
 	"time"
 )
 import "../helpers"
+import "../raft"
 
 type GameServer struct {
 	Mu                sync.Mutex
 	Ready             bool
 	GameOver          bool
-	Winner            int      // index of the winning player
-	Players           []Player // holds ID, hand, pairs, and opponents
-	Deck              []helpers.Card   // hold the cards that are still in the deck
-	CurrentTurnPlayer int      // what's the difference between this and currentTurn???
+	Winner            int            // index of the winning player
+	Players           []Player       // holds ID, hand, pairs, and opponents
+	Deck              []helpers.Card // hold the cards that are still in the deck
+	CurrentTurnPlayer int            // what's the difference between this and currentTurn???
 	CurrentTurn       int
 	PlayerCount       int // number of players in the game
 	GameInitialized   bool
 
-	ServerId int
+	ServerId int64
 }
-
-
-
 
 // RPC for clients (players) to join the game
 func (gs *GameServer) JoinGame(args *helpers.JoinGameArgs, reply *helpers.JoinGameReply) error {
@@ -70,7 +68,7 @@ func (gs *GameServer) loadCards() {
 	var values []helpers.Card
 	file, err := os.Open("standard52.json")
 	if err != nil {
-		log.Fatalf("Can opend card file\n")
+		log.Fatalf("Cant open card file\n")
 	}
 
 	dec := json.NewDecoder(file)
@@ -125,6 +123,7 @@ func (gs *GameServer) AskGameStatus(ask *helpers.GameStatusRequest, gameStatus *
 
 	if gs.GameOver {
 		gameStatus.Winner = gs.Winner
+		_ = os.Remove("server-id")
 	} else {
 		gameStatus.Winner = -1
 	}
@@ -178,8 +177,8 @@ func (gs *GameServer) EndTurn(ask *helpers.PlayPairRequest, reply *helpers.PlayP
 	// Update the player's hand
 	gs.Players[ask.Owner].Hand = ask.Hand
 
-
 	// Determine next player
+	gs.saveGameState()
 	gs.CurrentTurnPlayer++
 	if gs.CurrentTurnPlayer >= gs.PlayerCount {
 		gs.CurrentTurnPlayer = 0
@@ -246,24 +245,34 @@ func (gs *GameServer) server() {
 
 // Create a GameServer
 func MakeGameServer() *GameServer {
-
 	gs := GameServer{}
+	if _, err := os.Stat("server-id"); err == nil {
+		return gs.loadStartup()
+	} else {
+		return gs.createNewGs()
+	}
 
+}
+
+func (gs *GameServer) createNewGs() *GameServer {
 	gs.Mu.Lock()
-
 	gs.CurrentTurn = 0
 	gs.CurrentTurnPlayer = -1
 	gs.GameOver = false
 	gs.GameInitialized = false
 	gs.Ready = false
+	gs.ServerId = raft.Nrand()
+	fp, _ := os.Create("server-id")
+	_, _ = fp.WriteString(fmt.Sprintf("%d", gs.ServerId))
+	_ = fp.Close()
 
 	gs.server()
 
 	gs.Mu.Unlock()
 
 	// create 2 players
-	//go runClient()
-	//go runClient()
+	go runClient()
+	go runClient()
 
 	time.Sleep(3 * time.Second)
 
@@ -272,7 +281,7 @@ func MakeGameServer() *GameServer {
 	// not enough players or no one joined
 	if gs.PlayerCount < 2 {
 		fmt.Println("SERVER: Game error not enough players")
-		return &gs
+		return gs
 	}
 
 	gs.loadCards()
@@ -280,17 +289,13 @@ func MakeGameServer() *GameServer {
 
 	gs.CurrentTurnPlayer = 0
 
-	return &gs
+	return gs
 }
 
 func main() {
 
 	gs := MakeGameServer()
-	gs.CurrentTurn = 16
-	gs.saveGameState()
-	gs.CurrentTurn = 15
-	gs.getGameState()
-	fmt.Printf("%v",gs)
+	fmt.Printf("%v", gs)
 	fmt.Printf("%v", gs.CurrentTurn)
 	for !gs.GameOver {
 		time.Sleep(3 * time.Second)
@@ -302,8 +307,6 @@ func main() {
 }
 
 func (gs *GameServer) saveGameState() {
-	gs.Mu.Lock()
-	defer gs.Mu.Unlock()
 	args := helpers.GameStateArgs{}
 	reply := helpers.GameStateReply{}
 	args.Key = string(gs.ServerId)
@@ -323,7 +326,7 @@ func (gs *GameServer) getGameState() {
 	args.Key = string(gs.ServerId)
 	ok := helpers.CallRB("RaftBroker.GetGameState", &args, &reply)
 	if !ok || !reply.Ok {
-		fmt.Printf("Put Game state failed\n")
+		fmt.Printf("Get Game state failed\n")
 	}
 	gs.reconcileState(reply.Payload)
 
@@ -348,4 +351,18 @@ func (gs *GameServer) reconcileState(payload string) {
 		gs.GameInitialized = gsSaved.GameInitialized
 	}
 
+}
+
+func (gs *GameServer) loadStartup() *GameServer {
+	fp, err := os.Open("server-id")
+	if err != nil {
+		fmt.Printf("Could not open id file\n")
+	}
+	_, err = fmt.Fscanf(fp, "%d", &gs.ServerId)
+	if err != nil {
+		fmt.Printf("Failed to read id file")
+	}
+
+	gs.getGameState()
+	return gs
 }
