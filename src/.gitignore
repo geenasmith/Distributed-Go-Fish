@@ -1,3 +1,5 @@
 gofish/gofish
 broker/broker
 /gofish/server-id
+client/client
+server/server
