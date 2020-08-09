@@ -8,13 +8,11 @@ To run the application, first clone the repository:
 Open a terminal and navigate to the ```src``` directory:  
     ```cd src``` 
  
-Build the application:  
-    ```go build``` 
+Build and run the application:  
+    ```./play-game.sh``` 
  
-and finally run the game:  
-    ```./src``` 
  
-The output of the game will be printed out in the terminal. 
+The game will be played with 2 players and the output of the game will be printed out in the terminal. 
 
 ## Contributors:
 - [Ethan Kwan](https://github.com/eetar1)
