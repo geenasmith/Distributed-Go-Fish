@@ -320,6 +320,8 @@ func main() {
 
 	fmt.Printf("SERVER: Player %d won with %d pairs\n", gs.Winner, len(gs.Players[gs.Winner].Pairs))
 
+	time.Sleep(1 * time.Second)
+
 }
 
 func (gs *GameServer) saveGameState() {

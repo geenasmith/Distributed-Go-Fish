@@ -25,36 +25,6 @@ type GameStatusReply struct {
 	Players       []Player
 }
 
-
-// Main player functionality
-//func (p *Player) PlayGoFish() {
-//
-//	var gameOver = false
-//	for !gameOver {
-//		var reply = callGetGameStatus()
-//
-//		if reply.Complete {
-//			fmt.Printf("CLIENT: Game Over\n")
-//			return
-//		}
-//
-//		// update the player's game state information
-//		p.Opponents = reply.Players
-//		p.Hand = reply.Players[p.ID].Hand
-//		p.Pairs = reply.Players[p.ID].Pairs
-//
-//		// Currently this player's turn
-//		if reply.CurrentPlayer == p.ID {
-//			p.doTurn()
-//			p.endTurn()
-//		}
-//
-//		gameOver = reply.Complete
-//
-//		time.Sleep(300 * time.Millisecond)
-//	}
-//}
-
 // Determine the card value and opponent to ask. Send RPC to the server
 func (p *Player) doTurn() {
 
@@ -177,20 +147,9 @@ func createPlayer() Player {
 
 }
 
-//func RunClient() {
-//
-//	player := createPlayer()
-//	go player.PlayGoFish()
-//
-//}
 
 func main(){
 
-	//player := createPlayer()
-	//go player.PlayGoFish()
-	//for{
-	//	continue
-	//}
 	p := createPlayer()
 
 	var gameOver = false
@@ -199,7 +158,6 @@ func main(){
 
 		if reply.Complete {
 			fmt.Printf("CLIENT: Game Over\n")
-			//return
 			os.Exit(1)
 		}
 

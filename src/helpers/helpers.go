@@ -10,38 +10,6 @@ import (
 	"time"
 )
 
-// Struct to hold the state of the game
-//type Player struct {
-//	ID        int
-//	Hand      []Card
-//	Pairs     []Pairs
-//	Opponents []Player
-//}
-
-//type GameServer struct {
-//	Mu                sync.Mutex
-//	Ready             bool
-//	GameOver          bool
-//	Winner            int            // index of the winning player
-//	Players           []Player       // holds ID, hand, pairs, and opponents
-//	Deck              []Card // hold the cards that are still in the deck
-//	CurrentTurnPlayer int            // what's the difference between this and currentTurn???
-//	CurrentTurn       int
-//	PlayerCount       int // number of players in the game
-//	GameInitialized   bool
-//
-//	ServerId int64
-//}
-
-//type GameStatusReply struct {
-//	Complete      bool
-//	Turn          int
-//	CurrentPlayer int
-//	Winner        int
-//	Scores        []int
-//	Players       []Player
-//}
-
 type GameStateArgs struct {
 	Key     string
 	Payload string
