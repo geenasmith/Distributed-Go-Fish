@@ -1,15 +1,27 @@
 #!/bin/sh
 
 # build
-go build client.go || exit 1
-go build server.go || exit 1
+(cd client && go build) || exit 1
+(cd server && go build) || exit 1
+(cd broker && go build) || exit 1
+rm -f server-id || exit 1
 
-./server &
-# give server time to create socket
+# start the broker
+echo '***' Starting the broker '***'
+./broker/broker &
 sleep 1
 
-./client &
-./client
+# start the server
+echo '***' Starting the server '***'
+./server/server &
+sleep 1
+
+# create 2 players
+echo '***' creating 2 players '***'
+./client/client &
+./client/client
 
 wait
 wait
+
+

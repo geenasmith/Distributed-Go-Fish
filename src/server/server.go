@@ -13,8 +13,16 @@ import (
 	"sync"
 	"time"
 )
-import "../helpers"
+import . "../helpers"
 import "../raft"
+//import . "../client"
+
+type Player struct {
+	ID        int
+	Hand      []Card
+	Pairs     []Pairs
+	Opponents []Player
+}
 
 type GameServer struct {
 	Mu                sync.Mutex
@@ -22,7 +30,7 @@ type GameServer struct {
 	GameOver          bool
 	Winner            int            // index of the winning player
 	Players           []Player       // holds ID, hand, pairs, and opponents
-	Deck              []helpers.Card // hold the cards that are still in the deck
+	Deck              []Card // hold the cards that are still in the deck
 	CurrentTurnPlayer int            // what's the difference between this and currentTurn???
 	CurrentTurn       int
 	PlayerCount       int // number of players in the game
@@ -30,9 +38,17 @@ type GameServer struct {
 
 	ServerId int64
 }
+type GameStatusReply struct {
+	Complete      bool
+	Turn          int
+	CurrentPlayer int
+	Winner        int
+	Scores        []int
+	Players       []Player
+}
 
 // RPC for clients (players) to join the game
-func (gs *GameServer) JoinGame(args *helpers.JoinGameArgs, reply *helpers.JoinGameReply) error {
+func (gs *GameServer) JoinGame(args *JoinGameArgs, reply *JoinGameReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
@@ -65,7 +81,7 @@ func (gs *GameServer) loadCards() {
 
 	fmt.Printf("SERVER: loading cards\n")
 
-	var values []helpers.Card
+	var values []Card
 	file, err := os.Open("standard52.json")
 	if err != nil {
 		log.Fatalf("Cant open card file\n")
@@ -87,7 +103,7 @@ func (gs *GameServer) dealCards() {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
-	helpers.Shuffle(gs.Deck)
+	Shuffle(gs.Deck)
 
 	for i := 0; i < gs.PlayerCount; i++ {
 		gs.Players[i].Hand = gs.Deck[0:7]
@@ -98,7 +114,7 @@ func (gs *GameServer) dealCards() {
 }
 
 // RPC for clients (players) to ask the status of the game
-func (gs *GameServer) AskGameStatus(ask *helpers.GameStatusRequest, gameStatus *GameStatusReply) error {
+func (gs *GameServer) AskGameStatus(ask *GameStatusRequest, gameStatus *GameStatusReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
@@ -132,7 +148,7 @@ func (gs *GameServer) AskGameStatus(ask *helpers.GameStatusRequest, gameStatus *
 }
 
 // RPC for clients (players) to ask for specific cards from a specific player
-func (gs *GameServer) AskForCards(ask *helpers.CardRequest, reply *helpers.CardRequestReply) error {
+func (gs *GameServer) AskForCards(ask *CardRequest, reply *CardRequestReply) error {
 	gs.Mu.Lock()
 
 	reply.GoFish = true
@@ -165,7 +181,7 @@ func (gs *GameServer) AskForCards(ask *helpers.CardRequest, reply *helpers.CardR
 }
 
 // RPC for clients (players) to end their turn by playing their pairs and updating the game state
-func (gs *GameServer) EndTurn(ask *helpers.PlayPairRequest, reply *helpers.PlayPairReply) error {
+func (gs *GameServer) EndTurn(ask *PlayPairRequest, reply *PlayPairReply) error {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
 
@@ -188,11 +204,11 @@ func (gs *GameServer) EndTurn(ask *helpers.PlayPairRequest, reply *helpers.PlayP
 }
 
 // Go-fish action which draws 1 card
-func (gs *GameServer) goFish() helpers.Card {
+func (gs *GameServer) goFish() Card {
 
 	// Deck empty
 	if len(gs.Deck) == 0 {
-		return helpers.Card{Value: "-1"}
+		return Card{Value: "-1"}
 	}
 
 	var fish = gs.Deck[0]
@@ -234,7 +250,7 @@ func (gs *GameServer) checkGameOver() {
 func (gs *GameServer) server() {
 	rpc.Register(gs)
 	rpc.HandleHTTP()
-	sockname := helpers.GameServerSock()
+	sockname := GameServerSock()
 	os.Remove(sockname)
 	l, e := net.Listen("unix", sockname)
 	if e != nil {
@@ -271,10 +287,10 @@ func (gs *GameServer) createNewGs() *GameServer {
 	gs.Mu.Unlock()
 
 	// create 2 players
-	go runClient()
-	go runClient()
+	//go RunClient()
+	//go RunClient()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	fmt.Printf("\nSERVER: total %d players\n", gs.PlayerCount)
 
@@ -304,15 +320,17 @@ func main() {
 
 	fmt.Printf("SERVER: Player %d won with %d pairs\n", gs.Winner, len(gs.Players[gs.Winner].Pairs))
 
+	time.Sleep(1 * time.Second)
+
 }
 
 func (gs *GameServer) saveGameState() {
-	args := helpers.GameStateArgs{}
-	reply := helpers.GameStateReply{}
+	args := GameStateArgs{}
+	reply := GameStateReply{}
 	args.Key = string(gs.ServerId)
 	js, _ := json.Marshal(gs)
 	args.Payload = string(js)
-	ok := helpers.CallRB("RaftBroker.PutGameState", &args, &reply)
+	ok := CallRB("RaftBroker.PutGameState", &args, &reply)
 	if !ok || !reply.Ok {
 		fmt.Printf("Put Game state failed\n")
 	}
@@ -321,10 +339,10 @@ func (gs *GameServer) saveGameState() {
 func (gs *GameServer) getGameState() {
 	gs.Mu.Lock()
 	defer gs.Mu.Unlock()
-	args := helpers.GameStateArgs{}
-	reply := helpers.GameStateReply{}
+	args := GameStateArgs{}
+	reply := GameStateReply{}
 	args.Key = string(gs.ServerId)
-	ok := helpers.CallRB("RaftBroker.GetGameState", &args, &reply)
+	ok := CallRB("RaftBroker.GetGameState", &args, &reply)
 	if !ok || !reply.Ok {
 		fmt.Printf("Get Game state failed\n")
 	}

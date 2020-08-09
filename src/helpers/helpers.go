@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-// Struct to hold the state of the game
-
 type GameStateArgs struct {
 	Key     string
 	Payload string
