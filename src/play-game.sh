@@ -23,14 +23,6 @@ echo '***' creating 2 players '***'
 
 wait
 wait
-wait
 
-#./server &
-# give server time to create socket
-#sleep 1
-#
-#./client &
-#./client
-#
-#wait
-#wait
+
+

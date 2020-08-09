@@ -15,7 +15,7 @@
 # vendor/
 
 .idea/
-src/server
-src/client
-src/src
+#src/server
+#src/client
+#src/src
 jmeter.log
