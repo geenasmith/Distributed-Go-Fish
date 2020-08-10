@@ -107,6 +107,51 @@ func (p *Player) callEndTurn(pairs []Pairs) {
 	//Might want to update turn here from reply
 }
 
+func (p *Player) createNewPlayer() Player {
+	fmt.Println("CLIENT: successfully created player...")
+	// store player state
+	me := Player{}
+	// join game via RPC
+	fmt.Println("CLIENT: joining game...")
+	reply := callJoinGame()
+
+	if !reply.Success {
+		fmt.Println("Error: Could not join game.")
+		os.Exit(1)
+	}
+
+	me.ID = reply.ID
+	fp, _ := os.Create("client-id")
+	_, _ = fp.WriteString(fmt.Sprintf("%d", me.ID))
+	_ = fp.Close()
+
+	return me
+}
+
+func (p *Player) loadStartup() Player {
+	fp, err := os.Open("client-id")
+	if err != nil {
+		fmt.Printf("Could not open id file\n")
+	}
+	_, err = fmt.Fscanf(fp, "%d", &p.ID)
+	if err != nil {
+		fmt.Printf("Failed to read id file")
+	}
+
+	var reply = callGetGameStatus()
+
+	if reply.Complete {
+		fmt.Printf("CLIENT: Game Over\n")
+		os.Exit(1)
+	}
+	fmt.Printf("Loading game state from server with id %d\n", p.ID)
+	// update the player's game state information
+	p.Opponents = reply.Players
+	p.Hand = reply.Players[p.ID].Hand
+	p.Pairs = reply.Players[p.ID].Pairs
+	return *p
+}
+
 // Send RPC to the server to get the current game state
 func callGetGameStatus() GameStatusReply {
 	reply := GameStatusReply{}
@@ -125,32 +170,18 @@ func callJoinGame() JoinGameReply {
 }
 
 // Create the new player object
-func createPlayer() Player {
-	fmt.Println("CLIENT: successfully created player...")
-
-	// store player state
+func loadState() Player {
 	me := Player{}
-
-
-	// join game via RPC
-	fmt.Println("CLIENT: joining game...")
-	reply := callJoinGame()
-
-	if !reply.Success {
-		fmt.Println("Error: Could not join game.")
-		os.Exit(1)
+	if _, err := os.Stat("client-id"); err == nil {
+		return me.loadStartup()
+	} else {
+		return me.createNewPlayer()
 	}
-
-	me.ID = reply.ID
-
-	return me
-
 }
 
+func main() {
 
-func main(){
-
-	p := createPlayer()
+	p := loadState()
 
 	var gameOver = false
 	for !gameOver {

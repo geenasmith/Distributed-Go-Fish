@@ -15,7 +15,6 @@ import (
 )
 import . "../helpers"
 import "../raft"
-//import . "../client"
 
 type Player struct {
 	ID        int
@@ -28,10 +27,10 @@ type GameServer struct {
 	Mu                sync.Mutex
 	Ready             bool
 	GameOver          bool
-	Winner            int            // index of the winning player
-	Players           []Player       // holds ID, hand, pairs, and opponents
-	Deck              []Card // hold the cards that are still in the deck
-	CurrentTurnPlayer int            // what's the difference between this and currentTurn???
+	Winner            int      // index of the winning player
+	Players           []Player // holds ID, hand, pairs, and opponents
+	Deck              []Card   // hold the cards that are still in the deck
+	CurrentTurnPlayer int      // what's the difference between this and currentTurn???
 	CurrentTurn       int
 	PlayerCount       int // number of players in the game
 	GameInitialized   bool
@@ -286,11 +285,9 @@ func (gs *GameServer) createNewGs() *GameServer {
 
 	gs.Mu.Unlock()
 
-	// create 2 players
-	//go RunClient()
-	//go RunClient()
 
-	time.Sleep(5 * time.Second)
+
+	time.Sleep(30 * time.Second)
 
 	fmt.Printf("\nSERVER: total %d players\n", gs.PlayerCount)
 
@@ -382,5 +379,6 @@ func (gs *GameServer) loadStartup() *GameServer {
 	}
 
 	gs.getGameState()
+	gs.server()
 	return gs
 }
