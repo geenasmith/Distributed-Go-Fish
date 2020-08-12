@@ -204,6 +204,7 @@ func main() {
 		}
 
 		gameOver = reply.Complete
+		_ = os.Remove("client-id")
 
 		time.Sleep(300 * time.Millisecond)
 	}
