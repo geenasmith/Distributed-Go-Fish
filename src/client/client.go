@@ -189,6 +189,7 @@ func main() {
 
 		if reply.Complete {
 			fmt.Printf("CLIENT: Game Over\n")
+			_ = os.Remove("client-id")
 			os.Exit(1)
 		}
 
@@ -204,7 +205,7 @@ func main() {
 		}
 
 		gameOver = reply.Complete
-		_ = os.Remove("client-id")
+
 
 		time.Sleep(300 * time.Millisecond)
 	}
